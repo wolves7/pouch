@@ -80,6 +80,9 @@ type Resources struct {
 	//
 	BlkioWeightDevice []*ResourcesBlkioWeightDeviceItems0 `json:"BlkioWeightDevice"`
 
+	// to be added
+	CPUBvtWarpNs int64 `json:"CPUBvtWarpNs,omitempty"`
+
 	// Path to `cgroups` under which the container's `cgroup` is created. If the path is not absolute, the path is considered to be relative to the `cgroups` path of the init process. Cgroups are created if they do not already exist.
 	CgroupParent string `json:"CgroupParent,omitempty"`
 
@@ -134,11 +137,20 @@ type Resources struct {
 	// Maximum IOps for the container system drive (Windows only)
 	IOMaximumIOps uint64 `json:"IOMaximumIOps,omitempty"`
 
+	// to be added
+	IntelRdtL3Cbm string `json:"IntelRdtL3Cbm,omitempty"`
+
 	// Kernel memory limit in bytes.
 	KernelMemory int64 `json:"KernelMemory,omitempty"`
 
 	// Memory limit in bytes.
 	Memory int64 `json:"Memory,omitempty"`
+
+	// to be added
+	MemoryExtra int64 `json:"MemoryExtra,omitempty"`
+
+	// to be added
+	MemoryForceEmptyCtl int64 `json:"MemoryForceEmptyCtl,omitempty"`
 
 	// Memory soft limit in bytes.
 	MemoryReservation int64 `json:"MemoryReservation,omitempty"`
@@ -151,6 +163,9 @@ type Resources struct {
 	// Minimum: 0
 	MemorySwappiness *int64 `json:"MemorySwappiness,omitempty"`
 
+	// to be added
+	MemoryWmarkRatio int64 `json:"MemoryWmarkRatio,omitempty"`
+
 	// CPU quota in units of 10<sup>-9</sup> CPUs.
 	NanoCpus int64 `json:"NanoCPUs,omitempty"`
 
@@ -160,6 +175,9 @@ type Resources struct {
 	// Tune a container's pids limit. Set -1 for unlimited. Only on Linux 4.4 does this paramter support.
 	//
 	PidsLimit int64 `json:"PidsLimit,omitempty"`
+
+	// Enable scheduler latency count in cpuacct.
+	ScheLatSwitch int64 `json:"ScheLatSwitch,omitempty"`
 
 	// A list of resource limits to set in the container. For example: `{"Name": "nofile", "Soft": 1024, "Hard": 2048}`"
 	//
@@ -198,6 +216,8 @@ type Resources struct {
 
 /* polymorph Resources BlkioWeightDevice false */
 
+/* polymorph Resources CPUBvtWarpNs false */
+
 /* polymorph Resources CgroupParent false */
 
 /* polymorph Resources CpuCount false */
@@ -228,9 +248,15 @@ type Resources struct {
 
 /* polymorph Resources IOMaximumIOps false */
 
+/* polymorph Resources IntelRdtL3Cbm false */
+
 /* polymorph Resources KernelMemory false */
 
 /* polymorph Resources Memory false */
+
+/* polymorph Resources MemoryExtra false */
+
+/* polymorph Resources MemoryForceEmptyCtl false */
 
 /* polymorph Resources MemoryReservation false */
 
@@ -238,11 +264,15 @@ type Resources struct {
 
 /* polymorph Resources MemorySwappiness false */
 
+/* polymorph Resources MemoryWmarkRatio false */
+
 /* polymorph Resources NanoCPUs false */
 
 /* polymorph Resources OomKillDisable false */
 
 /* polymorph Resources PidsLimit false */
+
+/* polymorph Resources ScheLatSwitch false */
 
 /* polymorph Resources Ulimits false */
 

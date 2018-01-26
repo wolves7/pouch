@@ -26,7 +26,7 @@ type Container struct {
 	// Created time of container in daemon.
 	Created int64 `json:"Created,omitempty"`
 
-	// In Moby's API, HostConfig field in Container struct has following type
+	// In Pouch's API, HostConfig field in Container struct has following type
 	// struct { NetworkMode string `json:",omitempty"` }
 	// In Pouch, we need to pick runtime field in HostConfig from daemon side to judge runtime type,
 	// So Pouch changes this type to be the complete HostConfig.

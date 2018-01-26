@@ -527,7 +527,7 @@ paths:
 
         After the headers and two new lines, the TCP connection can now be used for raw, bidirectional communication between the client and server.
 
-        To hint potential proxies about connection hijacking, the Docker client can also optionally send connection upgrade headers.
+        To hint potential proxies about connection hijacking, the pouch client can also optionally send connection upgrade headers.
 
         For example, the client sends this request to upgrade the connection:
 
@@ -537,7 +537,7 @@ paths:
         Connection: Upgrade
         ```
 
-        The Docker daemon will respond with a `101 UPGRADED` response, and will similarly follow with the raw stream:
+        The Pouch daemon will respond with a `101 UPGRADED` response, and will similarly follow with the raw stream:
 
         ```
         HTTP/1.1 101 UPGRADED
@@ -1213,6 +1213,22 @@ definitions:
             description: "Whether to enable lxcfs."
             type: "boolean"
             x-nullable: false
+          NewImageID:
+            description: "New Image ID used to update container's original configuration."
+            type: "string"
+          NewEnv:
+            description: "New environment variables used to update container's original configuration."
+            type: "array"
+            items:
+              type: "string"
+          NewLabel:
+            description: "New labels used to update container's original configuration."
+            type: "array"
+            items:
+              type: "string"
+          NewDiskQuota:
+            description: "New diskquota used to update container's original configuration."
+            type: "string"
       - $ref: "#/definitions/Resources"
 
   Resources:
@@ -1276,57 +1292,6 @@ definitions:
         type: "array"
         items:
           $ref: "#/definitions/ThrottleDevice"
-      BlkFileLevelSwitch:
-         description: "Turn on/off file-level throttle"
-         type: "integer"
-         format: "int64"
-      BlkFileThrottlePath:
-         description: "Add an absolute path in container instance, which will be under control"
-         type: "array"
-         items:
-           type: "string"
-      BlkBufferWriteBps:
-         description: "Limit buffered write rate (bytes per second) to a device or file"
-         type: "integer"
-         format: "int64"
-      BlkBufferWriteSwitch:
-         description: "Turn on/off buffered write switch"
-         type: "integer"
-         format: "int64"
-      BlkDeviceBufferWriteBps:
-         description: |
-           Limit buffered write rate (bytes per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
-         type: "array"
-         items:
-           $ref: "#/definitions/ThrottleDevice"
-      BlkMetaWriteTps:
-         description: "Limit metadata write rate (transactions per second) to a device or file"
-         type: "integer"
-         format: "int64"
-      BlkioDeviceReadLowBps:
-         description: |
-           Limit sync/direct read rate (bytes per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
-         type: "array"
-         items:
-           $ref: "#/definitions/ThrottleDevice"
-      BlkioDeviceReadLowIOps:
-         description: |
-           Limit sync/direct read rate (IO per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
-         type: "array"
-         items:
-           $ref: "#/definitions/ThrottleDevice"
-      BlkioDeviceWriteLowBps:
-         description: |
-           Limit sync/direct write rate (bytes per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
-         type: "array"
-         items:
-           $ref: "#/definitions/ThrottleDevice"
-      BlkioDeviceWriteLowIOps:
-         description: |
-           Limit sync/direct write rate (IO per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
-         type: "array"
-         items:
-           $ref: "#/definitions/ThrottleDevice"
       CpuPeriod:
         description: |
           CPU CFS (Completely Fair Scheduler) period.
@@ -1438,6 +1403,81 @@ definitions:
         description: "Maximum IO in bytes per second for the container system drive (Windows only)"
         type: "integer"
         format: "uint64"
+      # Applicable to co-location kernel
+      BlkFileLevelSwitch:
+         description: "Turn on/off file-level throttle"
+         type: "integer"
+         format: "int64"
+      BlkFileThrottlePath:
+         description: "Add an absolute path in container instance, which will be under control"
+         type: "array"
+         items:
+           type: "string"
+      BlkBufferWriteBps:
+         description: "Limit buffered write rate (bytes per second) to a device or file"
+         type: "integer"
+         format: "int64"
+      BlkBufferWriteSwitch:
+         description: "Turn on/off buffered write switch"
+         type: "integer"
+         format: "int64"
+      BlkDeviceBufferWriteBps:
+         description: |
+           Limit buffered write rate (bytes per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
+         type: "array"
+         items:
+           $ref: "#/definitions/ThrottleDevice"
+      BlkMetaWriteTps:
+         description: "Limit metadata write rate (transactions per second) to a device or file"
+         type: "integer"
+         format: "int64"
+      BlkioDeviceReadLowBps:
+         description: |
+           Limit sync/direct read rate (bytes per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
+         type: "array"
+         items:
+           $ref: "#/definitions/ThrottleDevice"
+      BlkioDeviceReadLowIOps:
+         description: |
+           Limit sync/direct read rate (IO per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
+         type: "array"
+         items:
+           $ref: "#/definitions/ThrottleDevice"
+      BlkioDeviceWriteLowBps:
+         description: |
+           Limit sync/direct write rate (bytes per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
+         type: "array"
+         items:
+           $ref: "#/definitions/ThrottleDevice"
+      BlkioDeviceWriteLowIOps:
+         description: |
+           Limit sync/direct write rate (IO per second) to a device, in the form `[{"Path": "device_path", "Rate": rate}]`.
+         type: "array"
+         items:
+           $ref: "#/definitions/ThrottleDevice"
+      ScheLatSwitch:
+        description: "Enable scheduler latency count in cpuacct."
+        type: "integer"
+        format: "int64"
+      MemoryWmarkRatio:
+        description: "to be added"
+        type: "integer"
+        format: "int64"
+      MemoryExtra:
+        description: "to be added"
+        type: "integer"
+        format: "int64"
+      MemoryForceEmptyCtl:
+        description: "to be added"
+        type: "integer"
+        format: "int64"
+      CPUBvtWarpNs:
+        description: "to be added"
+        type: "integer"
+        format: "int64"
+      IntelRdtL3Cbm:
+        description: "to be added"
+        type: "string"
 
   ThrottleDevice:
     type: "object"
@@ -1511,7 +1551,7 @@ definitions:
         type: "string"
       HostConfig:
         description: |
-          In Moby's API, HostConfig field in Container struct has following type 
+          In Pouch's API, HostConfig field in Container struct has following type 
           struct { NetworkMode string `json:",omitempty"` }
           In Pouch, we need to pick runtime field in HostConfig from daemon side to judge runtime type,
           So Pouch changes this type to be the complete HostConfig.
@@ -1703,7 +1743,7 @@ definitions:
     type: "object"
     properties:
       Name:
-        description: "The new volume's name. If not specified, Docker generates a name."
+        description: "The new volume's name. If not specified, Pouch generates a name."
         type: "string"
         x-nullable: false
       Driver:

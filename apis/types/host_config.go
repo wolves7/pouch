@@ -92,6 +92,18 @@ type HostConfig struct {
 	// Network mode to use for this container. Supported standard values are: `bridge`, `host`, `none`, and `container:<name|id>`. Any other value is taken as a custom network's name to which this container should connect to.
 	NetworkMode string `json:"NetworkMode,omitempty"`
 
+	// New diskquota used to update container's original configuration.
+	NewDiskQuota string `json:"NewDiskQuota,omitempty"`
+
+	// New environment variables used to update container's original configuration.
+	NewEnv []string `json:"NewEnv"`
+
+	// New Image ID used to update container's original configuration.
+	NewImageID string `json:"NewImageID,omitempty"`
+
+	// New labels used to update container's original configuration.
+	NewLabel []string `json:"NewLabel"`
+
 	// An integer value containing the score given to the container in order to tune OOM killer preferences.
 	OomScoreAdj int64 `json:"OomScoreAdj,omitempty"`
 
@@ -193,6 +205,14 @@ func (m *HostConfig) UnmarshalJSON(raw []byte) error {
 
 		NetworkMode string `json:"NetworkMode,omitempty"`
 
+		NewDiskQuota string `json:"NewDiskQuota,omitempty"`
+
+		NewEnv []string `json:"NewEnv,omitempty"`
+
+		NewImageID string `json:"NewImageID,omitempty"`
+
+		NewLabel []string `json:"NewLabel,omitempty"`
+
 		OomScoreAdj int64 `json:"OomScoreAdj,omitempty"`
 
 		PidMode string `json:"PidMode,omitempty"`
@@ -266,6 +286,14 @@ func (m *HostConfig) UnmarshalJSON(raw []byte) error {
 	m.LogConfig = data.LogConfig
 
 	m.NetworkMode = data.NetworkMode
+
+	m.NewDiskQuota = data.NewDiskQuota
+
+	m.NewEnv = data.NewEnv
+
+	m.NewImageID = data.NewImageID
+
+	m.NewLabel = data.NewLabel
 
 	m.OomScoreAdj = data.OomScoreAdj
 
@@ -351,6 +379,14 @@ func (m HostConfig) MarshalJSON() ([]byte, error) {
 
 		NetworkMode string `json:"NetworkMode,omitempty"`
 
+		NewDiskQuota string `json:"NewDiskQuota,omitempty"`
+
+		NewEnv []string `json:"NewEnv,omitempty"`
+
+		NewImageID string `json:"NewImageID,omitempty"`
+
+		NewLabel []string `json:"NewLabel,omitempty"`
+
 		OomScoreAdj int64 `json:"OomScoreAdj,omitempty"`
 
 		PidMode string `json:"PidMode,omitempty"`
@@ -421,6 +457,14 @@ func (m HostConfig) MarshalJSON() ([]byte, error) {
 	data.LogConfig = m.LogConfig
 
 	data.NetworkMode = m.NetworkMode
+
+	data.NewDiskQuota = m.NewDiskQuota
+
+	data.NewEnv = m.NewEnv
+
+	data.NewImageID = m.NewImageID
+
+	data.NewLabel = m.NewLabel
 
 	data.OomScoreAdj = m.OomScoreAdj
 
@@ -520,6 +564,14 @@ func (m *HostConfig) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateLogConfig(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateNewEnv(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateNewLabel(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -713,6 +765,24 @@ func (m *HostConfig) validateLogConfig(formats strfmt.Registry) error {
 			}
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *HostConfig) validateNewEnv(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.NewEnv) { // not required
+		return nil
+	}
+
+	return nil
+}
+
+func (m *HostConfig) validateNewLabel(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.NewLabel) { // not required
+		return nil
 	}
 
 	return nil

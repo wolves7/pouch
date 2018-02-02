@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"text/tabwriter"
 
 	"github.com/alibaba/pouch/client"
 	"github.com/alibaba/pouch/pkg/utils"
+	"github.com/alibaba/pouch/version"
 
 	"github.com/fatih/structs"
 	"github.com/sirupsen/logrus"
@@ -20,8 +22,10 @@ var pouchDescription = "pouch is a client side tool pouch to interact with daemo
 
 // Option uses to define the global options.
 type Option struct {
-	host string
-	TLS  utils.TLSConfig
+	host    string
+	version bool
+
+	TLS utils.TLSConfig
 }
 
 // Cli is the client's core struct, it will be used to manage all subcommand, send http request
@@ -47,15 +51,20 @@ func NewCli() *Cli {
 	}
 }
 
-// SetFlags sets all global options.
-func (c *Cli) SetFlags() *Cli {
+// SetOrdinaryFlags sets all global options.
+func (c *Cli) SetOrdinaryFlags() {
+	flags := c.rootCmd.Flags()
+	flags.BoolVarP(&c.Option.version, "version", "v", false, "Print version information and quit")
+}
+
+// SetPersistentFlags sets all global options.
+func (c *Cli) SetPersistentFlags() {
 	flags := c.rootCmd.PersistentFlags()
 	flags.StringVarP(&c.Option.host, "host", "H", "unix:///var/run/pouchd.sock", "Specify connecting address of Pouch CLI")
 	flags.StringVar(&c.Option.TLS.Key, "tlskey", "", "Specify key file of TLS")
 	flags.StringVar(&c.Option.TLS.Cert, "tlscert", "", "Specify cert file of TLS")
 	flags.StringVar(&c.Option.TLS.CA, "tlscacert", "", "Specify CA file of TLS")
 	flags.BoolVar(&c.Option.TLS.VerifyRemote, "tlsverify", false, "Use TLS and verify remote")
-	return c
 }
 
 // NewAPIClient initializes the API client in Cli.
@@ -75,6 +84,10 @@ func (c *Cli) Client() *client.APIClient {
 
 // Run executes the client program.
 func (c *Cli) Run() error {
+	if c.Option.version {
+		showVersion()
+		return nil
+	}
 	return c.rootCmd.Execute()
 }
 
@@ -95,6 +108,10 @@ func (c *Cli) AddCommand(parent, child Command) {
 	}
 
 	parentCmd.AddCommand(childCmd)
+}
+
+func showVersion() {
+	fmt.Printf("Pouch version %s, build %s\n", version.Version, version.GitCommit)
 }
 
 // NewTableDisplay creates a display instance, and uses to format output with table.

@@ -8,8 +8,11 @@ import (
 func main() {
 	cli := NewCli()
 
-	// set global flags for rootCmd in cli.
-	cli.SetFlags()
+	// set ordinary flags for rootCmd in cli, such as --version.
+	cli.SetOrdinaryFlags()
+
+	// set global persistent flags for rootCmd in cli.
+	cli.SetPersistentFlags()
 
 	base := &baseCommand{cmd: cli.rootCmd, cli: cli}
 

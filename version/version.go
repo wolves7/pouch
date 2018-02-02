@@ -14,3 +14,6 @@ var APIVersion = "1.24"
 
 // GOVersion is the go version to build Pouch
 var GOVersion = "go1.9.1"
+
+// GitCommit is the commit ID from which compiled binary is.
+var GitCommit = ""

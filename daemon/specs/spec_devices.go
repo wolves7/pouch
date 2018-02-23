@@ -1,4 +1,4 @@
-package mgr
+package specs
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alibaba/pouch/daemon/mgr"
 	"github.com/alibaba/pouch/pkg/runconfig"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
@@ -89,7 +90,7 @@ func devicesFromPath(pathOnHost, pathInContainer, cgroupPermissions string) (dev
 	return devs, devPermissions, fmt.Errorf("error gathering device information while adding custom device %q: %s", pathOnHost, err)
 }
 
-func setupDevices(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupDevices(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	var devs []specs.LinuxDevice
 	s := spec.s
 	devPermissions := s.Linux.Resources.Devices

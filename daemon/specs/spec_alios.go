@@ -1,12 +1,14 @@
-package mgr
+package specs
 
 import (
 	"context"
 	"strconv"
+
+	"github.com/alibaba/pouch/daemon/mgr"
 )
 
 // setupAliOsOption extracts alios related options from HostConfig and locate them in spec's annotations which will be dealt by vendored runc.
-func setupAliOsOption(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupAliOsOption(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 
 	r := meta.HostConfig.Resources

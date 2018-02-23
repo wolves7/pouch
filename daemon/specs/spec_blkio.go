@@ -1,14 +1,16 @@
-package mgr
+package specs
 
 import (
 	"context"
 	"syscall"
 
 	"github.com/alibaba/pouch/apis/types"
+	"github.com/alibaba/pouch/daemon/mgr"
+
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func setupBlkio(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupBlkio(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	r := meta.HostConfig.Resources
 

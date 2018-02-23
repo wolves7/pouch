@@ -1,12 +1,14 @@
-package mgr
+package specs
 
 import (
 	"context"
 
+	"github.com/alibaba/pouch/daemon/mgr"
+
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func setupCgroupCPUShare(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupCgroupCPUShare(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	if s.Linux.Resources.CPU == nil {
 		s.Linux.Resources.CPU = &specs.LinuxCPU{}
@@ -18,7 +20,7 @@ func setupCgroupCPUShare(ctx context.Context, meta *ContainerMeta, spec *SpecWra
 	return nil
 }
 
-func setupCgroupCPUSet(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupCgroupCPUSet(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	if s.Linux.Resources.CPU == nil {
 		s.Linux.Resources.CPU = &specs.LinuxCPU{}

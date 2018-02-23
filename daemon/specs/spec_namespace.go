@@ -1,4 +1,4 @@
-package mgr
+package specs
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/alibaba/pouch/apis/types"
+	"github.com/alibaba/pouch/daemon/mgr"
+
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -60,7 +62,7 @@ func connectedContainer(mode string) string {
 	return ""
 }
 
-func getIpcContainer(ctx context.Context, mgr ContainerMgr, id string) (*ContainerMeta, error) {
+func getIpcContainer(ctx context.Context, mgr mgr.ContainerMgr, id string) (*mgr.ContainerMeta, error) {
 	// Check whether the container exists.
 	c, err := mgr.Get(ctx, id)
 	if err != nil {
@@ -74,7 +76,7 @@ func getIpcContainer(ctx context.Context, mgr ContainerMgr, id string) (*Contain
 	return c, nil
 }
 
-func getPidContainer(ctx context.Context, mgr ContainerMgr, id string) (*ContainerMeta, error) {
+func getPidContainer(ctx context.Context, mgr mgr.ContainerMgr, id string) (*mgr.ContainerMeta, error) {
 	// Check the container exists.
 	c, err := mgr.Get(ctx, id)
 	if err != nil {
@@ -87,11 +89,11 @@ func getPidContainer(ctx context.Context, mgr ContainerMgr, id string) (*Contain
 }
 
 // TODO
-func setupUserNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupUserNamespace(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	return nil
 }
 
-func setupNetworkNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupNetworkNamespace(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	if meta.Config.NetworkDisabled {
 		return nil
 	}
@@ -135,7 +137,7 @@ func setupNetworkNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecW
 	return nil
 }
 
-func setupIpcNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupIpcNamespace(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	ipcMode := meta.HostConfig.IpcMode
 	switch {
 	case isContainer(ipcMode):
@@ -155,7 +157,7 @@ func setupIpcNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapp
 	return nil
 }
 
-func setupPidNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupPidNamespace(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	pidMode := meta.HostConfig.PidMode
 	switch {
 	case isContainer(pidMode):
@@ -175,7 +177,7 @@ func setupPidNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapp
 	return nil
 }
 
-func setupUtsNamespace(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupUtsNamespace(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	utsMode := meta.HostConfig.UTSMode
 	switch {
 	case isHost(utsMode):

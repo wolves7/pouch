@@ -1,4 +1,4 @@
-package mgr
+package specs
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/alibaba/pouch/daemon/mgr"
 
 	"github.com/containerd/containerd/contrib/seccomp"
 	"github.com/docker/docker/daemon/caps"
@@ -27,7 +29,7 @@ const (
 
 // Setup linux-platform-sepecific specification.
 
-func setupSysctl(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupSysctl(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	spec.s.Linux.Sysctl = meta.HostConfig.Sysctls
 	return nil
 }
@@ -46,7 +48,7 @@ func isAppArmorEnabled() bool {
 	return false
 }
 
-func setupAppArmor(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupAppArmor(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	if !isAppArmorEnabled() {
 		// Return if the apparmor is disabled.
 		return nil
@@ -73,7 +75,7 @@ func setupAppArmor(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) 
 	return nil
 }
 
-func setupSeccomp(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupSeccomp(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	if meta.HostConfig.Privileged {
 		return nil
 	}
@@ -100,7 +102,7 @@ func setupSeccomp(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) e
 	return nil
 }
 
-func setupCapabilities(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupCapabilities(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	var caplist []string
 	var err error
 
@@ -118,7 +120,7 @@ func setupCapabilities(ctx context.Context, meta *ContainerMeta, spec *SpecWrapp
 	return nil
 }
 
-func setupIntelRdt(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupIntelRdt(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	if s.Linux.IntelRdt == nil {
 		s.Linux.IntelRdt = &specs.LinuxIntelRdt{}

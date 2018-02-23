@@ -1,7 +1,9 @@
-package mgr
+package specs
 
 import (
 	"context"
+
+	"github.com/alibaba/pouch/daemon/mgr"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -10,13 +12,13 @@ import (
 type SpecWrapper struct {
 	s *specs.Spec
 
-	ctrMgr ContainerMgr
-	volMgr VolumeMgr
-	netMgr NetworkMgr
+	ctrMgr mgr.ContainerMgr
+	volMgr mgr.VolumeMgr
+	netMgr mgr.NetworkMgr
 }
 
 // SetupFunc defines spec setup function type.
-type SetupFunc func(ctx context.Context, m *ContainerMeta, s *SpecWrapper) error
+type SetupFunc func(ctx context.Context, m *mgr.ContainerMeta, s *SpecWrapper) error
 
 var setupFunc = []SetupFunc{
 	// process

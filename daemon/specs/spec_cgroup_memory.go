@@ -1,7 +1,9 @@
-package mgr
+package specs
 
 import (
 	"context"
+
+	"github.com/alibaba/pouch/daemon/mgr"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -13,7 +15,7 @@ func getCgroupMemory(s *specs.Spec) *specs.LinuxMemory {
 	return s.Linux.Resources.Memory
 }
 
-func setupCgroupMemory(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupCgroupMemory(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	mem := getCgroupMemory(s)
 
@@ -22,7 +24,7 @@ func setupCgroupMemory(ctx context.Context, meta *ContainerMeta, spec *SpecWrapp
 	return nil
 }
 
-func setupCgroupMemorySwap(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupCgroupMemorySwap(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	mem := getCgroupMemory(s)
 
@@ -31,7 +33,7 @@ func setupCgroupMemorySwap(ctx context.Context, meta *ContainerMeta, spec *SpecW
 	return nil
 }
 
-func setupCgroupMemorySwappiness(ctx context.Context, meta *ContainerMeta, spec *SpecWrapper) error {
+func setupCgroupMemorySwappiness(ctx context.Context, meta *mgr.ContainerMeta, spec *SpecWrapper) error {
 	s := spec.s
 	mem := getCgroupMemory(s)
 

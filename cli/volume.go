@@ -308,10 +308,10 @@ func (v *VolumeListCommand) runVolumeList(args []string) error {
 	}
 
 	display := v.cli.NewTableDisplay()
-	display.AddRow([]string{"Name:"})
+	display.AddRow([]string{"NAME", "DRIVER"})
 
 	for _, v := range volumeList.Volumes {
-		display.AddRow([]string{v.Name})
+		display.AddRow([]string{v.Name, v.Driver})
 	}
 
 	display.Flush()

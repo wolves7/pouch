@@ -48,7 +48,7 @@ type router struct {
 }
 
 // NewDaemon constructs a brand new server.
-func NewDaemon(cfg *config.Config) *Daemon {
+func NewDaemon(cfg config.Config) (*Daemon, error) {
 	containerStore, err := meta.NewStore(meta.Config{
 		Driver:  "local",
 		BaseDir: path.Join(cfg.HomeDir, "containers"),
@@ -61,7 +61,7 @@ func NewDaemon(cfg *config.Config) *Daemon {
 	})
 	if err != nil {
 		logrus.Errorf("failed to create container meta store: %v", err)
-		return nil
+		return nil, err
 	}
 
 	// New containerd client
@@ -85,14 +85,14 @@ func NewDaemon(cfg *config.Config) *Daemon {
 	)
 	if err != nil {
 		logrus.Errorf("failed to new containerd's client: %v", err)
-		return nil
+		return nil, err
 	}
 
 	return &Daemon{
 		config:         cfg,
 		containerd:     containerd,
 		containerStore: containerStore,
-	}
+	}, nil
 }
 
 func loadSymbolByName(p *plugin.Plugin, name string) (plugin.Symbol, error) {

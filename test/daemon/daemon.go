@@ -155,7 +155,7 @@ func (d *Config) StartDaemon() error {
 
 	err = cmd.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start cmd %v, err %s", cmd, err)
+		return fmt.Errorf("failed to start cmd %v: %v", cmd, err)
 	}
 
 	// record the pid
@@ -209,7 +209,7 @@ func (d *Config) KillDaemon() {
 		// kill pouchd and all other process in its group
 		err := syscall.Kill(-d.Pid, syscall.SIGKILL)
 		if err != nil {
-			fmt.Printf("kill pouchd failed, err:%s", err)
+			fmt.Printf("failed to kill pouchd: %s", err)
 			return
 		}
 

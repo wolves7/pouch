@@ -207,9 +207,9 @@ func runDaemon(cmd *cobra.Command) error {
 	)
 
 	// new daemon instance, this is core.
-	d := daemon.NewDaemon(cfg)
-	if d == nil {
-		return fmt.Errorf("failed to new daemon")
+	d, err := daemon.NewDaemon(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to new daemon: %v", err)
 	}
 
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGHUP)

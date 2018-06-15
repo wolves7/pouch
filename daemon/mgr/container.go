@@ -22,18 +22,17 @@ import (
 	"github.com/alibaba/pouch/daemon/containerio"
 	"github.com/alibaba/pouch/daemon/logger"
 	"github.com/alibaba/pouch/lxcfs"
-	networktypes "github.com/alibaba/pouch/network/types"
 	"github.com/alibaba/pouch/pkg/collect"
 	"github.com/alibaba/pouch/pkg/errtypes"
 	"github.com/alibaba/pouch/pkg/meta"
 	"github.com/alibaba/pouch/pkg/randomid"
 	"github.com/alibaba/pouch/pkg/utils"
 	"github.com/alibaba/pouch/storage/quota"
-	volumetypes "github.com/alibaba/pouch/storage/volume/types"
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/libnetwork"
+	networktypes "github.com/docker/libnetwork/types"
 	"github.com/go-openapi/strfmt"
 	"github.com/imdario/mergo"
 	"github.com/magiconair/properties"
@@ -455,21 +454,28 @@ func (mgr *ContainerManager) Start(ctx context.Context, id, detachKeys string) (
 	return mgr.start(ctx, c, detachKeys)
 }
 
+// start starts an existing container.
+// This function is used for action start/restart.
 func (mgr *ContainerManager) start(ctx context.Context, c *Container, detachKeys string) error {
-	c.Lock()
-	if c.Config == nil || c.State == nil {
-		c.Unlock()
-		return errors.Wrapf(errtypes.ErrNotfound, "container %s", c.ID)
-	}
 	c.DetachKeys = detachKeys
-
 	// initialise container network mode
+
+	if err := mgr.prepareContainerNetwork(ctx, c); err != nil {
+		return err
+	}
+
+	return mgr.createContainerdContainer(ctx, c)
+}
+
+func (mgr *ContainerManager) prepareContainerNetwork(ctx context.Context, c *Container) {
+	c.Lock()
+	defer c.Unlock()
+
 	networkMode := c.HostConfig.NetworkMode
 
 	if IsContainer(networkMode) {
 		origContainer, err := mgr.Get(ctx, strings.SplitN(networkMode, ":", 2)[1])
 		if err != nil {
-			c.Unlock()
 			return err
 		}
 
@@ -478,40 +484,40 @@ func (mgr *ContainerManager) start(ctx context.Context, c *Container, detachKeys
 		c.ResolvConfPath = origContainer.ResolvConfPath
 		c.Config.Hostname = origContainer.Config.Hostname
 		c.Config.Domainname = origContainer.Config.Domainname
-	} else {
-		// initialise host network mode
-		if IsHost(networkMode) {
-			hostname, err := os.Hostname()
-			if err != nil {
-				c.Unlock()
-				return err
-			}
-			c.Config.Hostname = strfmt.Hostname(hostname)
-		}
 
-		// build the network related path.
-		if err := mgr.buildNetworkRelatedPath(c); err != nil {
-			c.Unlock()
+		return nil
+	}
+
+	// initialise host network mode
+	if IsHost(networkMode) {
+		hostname, err := os.Hostname()
+		if err != nil {
 			return err
 		}
+		c.Config.Hostname = strfmt.Hostname(hostname)
+	}
 
-		// initialise network endpoint
-		if c.NetworkSettings != nil {
-			for name, endpointSetting := range c.NetworkSettings.Networks {
-				endpoint := mgr.buildContainerEndpoint(c)
-				endpoint.Name = name
-				endpoint.EndpointConfig = endpointSetting
-				if _, err := mgr.NetworkMgr.EndpointCreate(ctx, endpoint); err != nil {
-					logrus.Errorf("failed to create endpoint: %v", err)
-					c.Unlock()
-					return err
-				}
-			}
+	// build the network related path.
+	if err := mgr.buildNetworkRelatedPath(c); err != nil {
+		return err
+	}
+
+	// initialise network endpoint
+	if c.NetworkSettings == nil {
+		return nil
+	}
+
+	for name, endpointSetting := range c.NetworkSettings.Networks {
+		endpoint := mgr.buildContainerEndpoint(c)
+		endpoint.Name = name
+		endpoint.EndpointConfig = endpointSetting
+		if _, err := mgr.NetworkMgr.EndpointCreate(ctx, endpoint); err != nil {
+			logrus.Errorf("failed to create endpoint: %v", err)
+			return err
 		}
 	}
-	c.Unlock()
 
-	return mgr.createContainerdContainer(ctx, c)
+	return nil
 }
 
 // buildNetworkRelatedPath builds the network related path.
@@ -589,6 +595,9 @@ func (mgr *ContainerManager) createContainerdContainer(ctx context.Context, c *C
 	}
 
 	// Create containerd container success.
+	c.Lock()
+	c.Snapshotter.Data["MergedDir"] = c.BaseFS
+	c.Unlock()
 
 	pid, err := mgr.Client.ContainerPID(ctx, c.ID)
 	if err != nil {
@@ -596,11 +605,6 @@ func (mgr *ContainerManager) createContainerdContainer(ctx context.Context, c *C
 	}
 
 	c.SetStatusRunning(int64(pid))
-
-	// set Snapshot MergedDir
-	c.Lock()
-	c.Snapshotter.Data["MergedDir"] = c.BaseFS
-	c.Unlock()
 
 	return c.Write(mgr.Store)
 }
@@ -645,8 +649,15 @@ func (mgr *ContainerManager) Restart(ctx context.Context, name string, timeout i
 		timeout = c.StopTimeout()
 	}
 
-	if c.IsRunningOrPaused() {
+	isOriginalRunningOrPaused := c.IsRunningOrPaused()
+
+	if err := c.SetStatusRestarting(); err != nil {
+		return err
+	}
+
+	if isOriginalRunningOrPaused {
 		// stop container if it is running or paused.
+		logrus.Debugf("try to stop running container %s when restarting", c.ID)
 		if err := mgr.stop(ctx, c, timeout); err != nil {
 			ex := fmt.Errorf("failed to stop container %s when restarting: %v", c.ID, err)
 			logrus.Errorf(ex.Error())
@@ -670,18 +681,16 @@ func (mgr *ContainerManager) Pause(ctx context.Context, name string) error {
 		return fmt.Errorf("container's status is not running: %s", c.State.Status)
 	}
 
+	c.Lock()
 	if err := mgr.Client.PauseContainer(ctx, c.ID); err != nil {
-		return errors.Wrapf(err, "failed to pause container %s", c.ID)
-	}
-
-	c.SetStatusPaused()
-
-	if err := c.Write(mgr.Store); err != nil {
-		logrus.Errorf("failed to update meta of container %s: %v", c.ID, err)
+		logrus.Errorf("failed to pause container %s: %v", c.ID, err)
+		c.Unlock()
 		return err
-	}
 
-	return nil
+	}
+	c.Unlock()
+
+	return c.SetStatusPaused()
 }
 
 // Unpause unpauses a paused container.
@@ -699,7 +708,7 @@ func (mgr *ContainerManager) Unpause(ctx context.Context, name string) error {
 		return errors.Wrapf(err, "failed to unpause container %s", c.ID)
 	}
 
-	c.SetStatusUnpaused()
+	c.SetStatusRunning()
 
 	if err := c.Write(mgr.Store); err != nil {
 		logrus.Errorf("failed to update meta of container %s: %v", c.ID, err)
@@ -903,40 +912,49 @@ func (mgr *ContainerManager) Remove(ctx context.Context, name string, options *t
 	}
 
 	if !c.IsStopped() && !c.IsExited() && !c.IsCreated() && !options.Force {
-		return fmt.Errorf("container %s is not stopped, cannot remove it without flag force", c.ID)
+		return fmt.Errorf("cannot remove unstopped container %s without flag force", c.ID)
+	}
+
+	isOriginalRunning := c.IsRunning()
+
+	if err := c.SetStatusRemoving(); err != nil {
+		return err
 	}
 
 	// if the container is running, force to stop it.
-	if c.IsRunning() && options.Force {
+	if isOriginalRunning && options.Force {
 		msg, err := mgr.Client.DestroyContainer(ctx, c.ID, c.StopTimeout())
 		if err != nil && !errtypes.IsNotfound(err) {
-			return errors.Wrapf(err, "failed to destroy container %s", c.ID)
+			// FIXME: what to do with the container state rollback if DestroyContainer fails
+			return errors.Wrapf(err, "failed to destroy container %s when removing", c.ID)
 		}
-		if err := mgr.markStoppedAndRelease(c, msg); err != nil {
-			return errors.Wrapf(err, "failed to mark container %s stop status", c.ID)
+		// After stopping a running container, we should release container resource
+		c.UnsetMergedDir()
+		if err := mgr.releaseContainerResources(c); err != nil {
+			logrus.Errorf("failed to release container %s resources when removing: %v", c.ID, err)
 		}
 	}
 
 	if err := mgr.detachVolumes(ctx, c, options.Volumes); err != nil {
-		logrus.Errorf("failed to detach volume: %v", err)
+		logrus.Errorf("failed to detach volume for container %s when removing: %v", c.ID, err)
 	}
-
-	// remove name
-	c.Lock()
-	mgr.NameToID.Remove(c.Name)
-	c.Unlock()
-
-	// remove meta data
-	if err := mgr.Store.Remove(c.Key()); err != nil {
-		logrus.Errorf("failed to remove container %s from meta store: %v", c.ID, err)
-	}
-
-	// remove container cache
-	mgr.cache.Remove(c.ID)
 
 	// remove snapshot
 	if err := mgr.Client.RemoveSnapshot(ctx, c.ID); err != nil {
 		logrus.Errorf("failed to remove snapshot of container %s: %v", c.ID, err)
+	}
+
+	// When removing a container, we have set up such rule for object removing sequences:
+	// 1. container object in pouchd's memory;
+	// 2. meta.json for container in local disk.
+
+	// remove container object from memory
+	mgr.NameToID.Remove(c.Name)
+	mgr.cache.Remove(c.ID)
+
+	// remove meta.json for container in local disk
+	if err := mgr.Store.Remove(c.Key()); err != nil {
+		logrus.Errorf("failed to remove container %s from meta store: %v", c.ID, err)
 	}
 
 	return nil
@@ -1718,14 +1736,8 @@ func (mgr *ContainerManager) markStoppedAndRelease(c *Container, m *ctrd.Message
 		}
 	}
 
-	c.SetStatusStopped(code, errMsg)
-
-	// unset Snapshot MergedDir. Stop a container will
-	// delete the containerd container, the merged dir
-	// will also be deleted, so we should unset the
-	// container's MergedDir.
-	if c.Snapshotter != nil && c.Snapshotter.Data != nil {
-		c.Snapshotter.Data["MergedDir"] = ""
+	if err := c.SetStatusStopped(code, errMsg); err != nil {
+		return err
 	}
 
 	// Action Container Remove and function markStoppedAndRelease are conflict.
@@ -1740,47 +1752,54 @@ func (mgr *ContainerManager) markStoppedAndRelease(c *Container, m *ctrd.Message
 
 	// Remove io and network config may occur error, so we should update
 	// container's status on disk as soon as possible.
-	if err := c.Write(mgr.Store); err != nil {
-		logrus.Errorf("failed to update meta: %v", err)
+	defer func() {
+		if err := c.Write(mgr.Store); err != nil {
+			logrus.Errorf("failed to update meta: %v", err)
+		}
+	}()
+
+	c.UnsetMergedDir()
+
+	return mgr.releaseContainerResources(c)
+}
+
+func (mgr *ContainerManager) markExitedAndRelease(c *Container, m *ctrd.Message) error {
+	var (
+		exitCode int64  // container exit code used for container state setting
+		errMsg   string // container exit error message used for container state setting
+	)
+	if m != nil {
+		exitCode = int64(m.ExitCode())
+		if err := m.RawError(); err != nil {
+			errMsg = err.Error()
+		}
+	}
+
+	if err := c.SetStatusExited(exitCode, errMsg); err != nil {
 		return err
 	}
 
-	// release resource
-	if io := mgr.IOs.Get(c.ID); io != nil {
-		io.Close()
-		mgr.IOs.Remove(c.ID)
-	}
-
-	// No network binded, just return
-	c.Lock()
-	if c.NetworkSettings == nil {
-		c.Unlock()
+	// Action Container Remove and function markStoppedAndRelease are conflict.
+	// If a container has been removed and the corresponding meta.json will be removed as well.
+	// However, when this function markStoppedAndRelease still keeps the container instance,
+	// there will be possibility that in markStoppedAndRelease, code calls c.Write(mgr.Store) to
+	// write the removed meta.json again. If that, incompatibilty happens.
+	// As a result, we check whether this container is still in the meta store.
+	if container, err := mgr.container(c.Name); err != nil || container == nil {
 		return nil
 	}
 
-	for name, epConfig := range c.NetworkSettings.Networks {
-		endpoint := mgr.buildContainerEndpoint(c)
-		endpoint.Name = name
-		endpoint.EndpointConfig = epConfig
-		if err := mgr.NetworkMgr.EndpointRemove(context.Background(), endpoint); err != nil {
-			// TODO(ziren): it is a trick, we should wrapper "sanbox
-			// not found"" as an error type
-			if !strings.Contains(err.Error(), "not found") {
-				logrus.Errorf("failed to remove endpoint: %v", err)
-				c.Unlock()
-				return err
-			}
+	// Remove io and network config may occur error, so we should update
+	// container's status on disk as soon as possible.
+	defer func() {
+		if err := c.Write(mgr.Store); err != nil {
+			logrus.Errorf("failed to update meta: %v", err)
 		}
-	}
-	c.Unlock()
+	}()
 
-	// update meta
-	if err := c.Write(mgr.Store); err != nil {
-		logrus.Errorf("failed to update meta of container %s: %v", c.ID, err)
-		return err
-	}
+	c.UnsetMergedDir()
 
-	return nil
+	return mgr.releaseContainerResources(c)
 }
 
 // exitedAndRelease be register into ctrd as a callback function, when the running container suddenly
@@ -1791,11 +1810,9 @@ func (mgr *ContainerManager) exitedAndRelease(id string, m *ctrd.Message) error 
 		return err
 	}
 
-	if err := mgr.markStoppedAndRelease(c, m); err != nil {
+	if err := mgr.markExitedAndRelease(c, m); err != nil {
 		return err
 	}
-
-	c.SetStatusExited()
 
 	// Action Container Remove and function exitedAndRelease are conflict.
 	// If a container has been removed and the corresponding meta.json will be removed as well.
@@ -1805,11 +1822,6 @@ func (mgr *ContainerManager) exitedAndRelease(id string, m *ctrd.Message) error 
 	// As a result, we check whether this container is still in the meta store.
 	if container, err := mgr.container(c.Name); err != nil || container == nil {
 		return nil
-	}
-
-	if err := c.Write(mgr.Store); err != nil {
-		logrus.Errorf("failed to update meta: %v", err)
-		return err
 	}
 
 	// send exit event to monitor
@@ -1849,17 +1861,63 @@ func (mgr *ContainerManager) execExitedAndRelease(id string, m *ctrd.Message) er
 	execConfig.Running = false
 	execConfig.Error = m.RawError()
 
-	if io := mgr.IOs.Get(id); io != nil {
-		if err := m.RawError(); err != nil {
-			fmt.Fprintf(io.Stdout, "%v\n", err)
-		}
+	io := mgr.IOs.Get(id)
+	if io == nil {
+		return nil
+	}
 
-		// close io
-		io.Close()
-		mgr.IOs.Remove(id)
+	if err := m.RawError(); err != nil {
+		fmt.Fprintf(io.Stdout, "%v\n", err)
+	}
+
+	// close io
+	io.Close()
+	mgr.IOs.Remove(id)
+
+	return nil
+}
+
+func (mgr *ContainerManager) releaseContainerResources(c *Container) error {
+	mgr.releaseContainerIOs(c.ID)
+	return mgr.releaseContainerNetwork(c)
+}
+
+// releaseContainerNetwork release container network when container exits or is stopped.
+func (mgr *ContainerManager) releaseContainerNetwork(c *Container) error {
+	c.Lock()
+	defer c.Unlock()
+	if c.NetworkSettings == nil {
+		return nil
+	}
+
+	for name, epConfig := range c.NetworkSettings.Networks {
+		endpoint := mgr.buildContainerEndpoint(c)
+		endpoint.Name = name
+		endpoint.EndpointConfig = epConfig
+		if err := mgr.NetworkMgr.EndpointRemove(context.Background(), endpoint); err != nil {
+			// TODO(ziren): it is a trick, we should wrapper "sanbox
+			// not found"" as an error type
+			if !strings.Contains(err.Error(), "not found") {
+				logrus.Errorf("failed to remove endpoint: %v", err)
+				return err
+			}
+		}
 	}
 
 	return nil
+}
+
+// releaseContainerIOs releases container IO resources.
+func (mgr *ContainerManager) releaseContainerIOs(containerID string) {
+	// release resource
+	io := mgr.IOs.Get(containerID)
+	if io == nil {
+		return
+	}
+
+	io.Close()
+	mgr.IOs.Remove(containerID)
+	return
 }
 
 func (mgr *ContainerManager) attachVolume(ctx context.Context, name string, c *Container) (string, string, error) {

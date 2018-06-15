@@ -1,6 +1,7 @@
 package mgr
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/alibaba/pouch/apis/types"
@@ -11,6 +12,7 @@ import (
 func (c *Container) IsRunning() bool {
 	c.Lock()
 	defer c.Unlock()
+
 	return c.State.Status == types.StatusRunning
 }
 
@@ -68,6 +70,7 @@ func (c *Container) IsRestarting() bool {
 	c.Lock()
 	defer c.Unlock()
 	return c.State.Status == types.StatusRestarting
+
 }
 
 // ExitCode returns container's ExitCode.
@@ -83,13 +86,19 @@ func (c *Container) ExitCode() int64 {
 // StartAt -> time.Now()
 // Pid -> input param
 // ExitCode -> 0
-func (c *Container) SetStatusRunning(pid int64) {
+func (c *Container) SetStatusRunning(pid int64) error {
 	c.Lock()
 	defer c.Unlock()
+
+	if !stateMachine[c.State.Status][types.StatusRunning] {
+		return fmt.Errorf("container %s cannot transit from status %v to %v", c.ID, c.State.Status, types.StatusRunning)
+	}
 	c.State.Status = types.StatusRunning
 	c.State.StartedAt = time.Now().UTC().Format(utils.TimeLayout)
 	c.State.Pid = pid
 	c.State.ExitCode = 0
+
+	return nil
 }
 
 // SetStatusStopped sets a container to be status stopped.
@@ -99,34 +108,78 @@ func (c *Container) SetStatusRunning(pid int64) {
 // Pid -> -1
 // ExitCode -> input param
 // Error -> input param
-func (c *Container) SetStatusStopped(exitCode int64, errMsg string) {
+func (c *Container) SetStatusStopped(exitCode int64, errMsg string) error {
 	c.Lock()
 	defer c.Unlock()
+
+	if !stateMachine[c.State.Status][types.StatusStopped] {
+		return fmt.Errorf("container %s cannot transit from status %v to %v", c.ID, c.State.Status, types.StatusStopped)
+	}
+
 	c.State.Status = types.StatusStopped
 	c.State.FinishedAt = time.Now().UTC().Format(utils.TimeLayout)
 	c.State.Pid = -1
 	c.State.ExitCode = exitCode
 	c.State.Error = errMsg
+
+	return nil
 }
 
 // SetStatusExited sets a container to be status exited.
-func (c *Container) SetStatusExited() {
+func (c *Container) SetStatusExited(exitCode int64, errMsg string) error {
 	c.Lock()
 	defer c.Unlock()
+
+	if !stateMachine[c.State.Status][types.StatusExited] {
+		return fmt.Errorf("container %s cannot transit from status %v to %v", c.ID, c.State.Status, types.StatusExited)
+	}
+
 	c.State.Status = types.StatusExited
+	c.State.FinishedAt = time.Now().UTC().Format(utils.TimeLayout)
+	c.State.Pid = -1
+	c.State.ExitCode = exitCode
+	c.State.Error = errMsg
+
+	return nil
 }
 
 // SetStatusPaused sets a container to be status paused.
-func (c *Container) SetStatusPaused() {
+func (c *Container) SetStatusPaused() error {
 	c.Lock()
 	defer c.Unlock()
+
+	if !stateMachine[c.State.Status][types.StatusPaused] {
+		return fmt.Errorf("container %s cannot transit from status %v to %v", c.ID, c.State.Status, types.StatusPaused)
+	}
+
 	c.State.Status = types.StatusPaused
+
+	return nil
 }
 
-// SetStatusUnpaused sets a container to be status running.
-// Unpaused is treated running.
-func (c *Container) SetStatusUnpaused() {
+// SetStatusRestarting sets a container to be status restarting.
+func (c *Container) SetStatusRestarting() error {
 	c.Lock()
 	defer c.Unlock()
-	c.State.Status = types.StatusRunning
+
+	if !stateMachine[c.State.Status][types.StatusRestarting] {
+		return fmt.Errorf("container %s cannot transit from status %v to %v", c.ID, c.State.Status, types.StatusRestarting)
+	}
+
+	c.State.Status = types.StatusRestarting
+	return nil
+}
+
+// SetStatusRemoving sets a container to be status restarting.
+func (c *Container) SetStatusRemoving() error {
+	c.Lock()
+	defer c.Unlock()
+
+	if !stateMachine[c.State.Status][types.StatusRemoving] {
+		return fmt.Errorf("container %s cannot transit from status %v to %v", c.ID, c.State.Status, types.StatusRemoving)
+	}
+
+	c.State.Status = types.StatusRemoving
+
+	return nil
 }

@@ -86,11 +86,13 @@ For more details about frequently asked questions (FAQ), please refer to file [F
 
 For more details about roadmap, please refer to file [ROADMAP.md](ROADMAP.md).
 
-## Connect with us
+## Community
 
-You are encouraged to communicate everything via GitHub issues or pull requests. In the future, we would provide more channels for communication if necessary.
+You are encouraged to communicate everything via GitHub issues or pull requests.
 
 If you have urgent issues, please contact PouchContainer team at [pouch-dev@list.alibaba-inc.com](mailto:pouch-dev@list.alibaba-inc.com).
+
+Twitter: [@pouchcontainer](https://twitter.com/pouchcontainer)
 
 ## License
 

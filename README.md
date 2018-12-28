@@ -88,9 +88,17 @@ For more details about roadmap, please refer to file [ROADMAP.md](ROADMAP.md).
 
 ## Connect with us
 
-You are encouraged to communicate everything via GitHub issues or pull requests. In the future, we would provide more channels for communication if necessary.
+You are encouraged to communicate everything via GitHub issues or pull requests. Besides that, we also provide other channels for the community.
 
-If you have urgent issues, please contact PouchContainer team at [pouch-dev@list.alibaba-inc.com](mailto:pouch-dev@list.alibaba-inc.com).
+If you have urgent issues, please contact PouchContainer team at:
+
+* email: [pouch-dev@list.alibaba-inc.com](mailto:pouch-dev@list.alibaba-inc.com);
+* twitter: [@pouchcontainer](https://twitter.com/pouchcontainer)
+* Dingtalk Group(钉钉群)
+
+<p align="center"> 
+<img src="https://user-images.githubusercontent.com/9465626/50506321-497f1600-0ab3-11e9-9aa2-57c807c753a8.jpg" width="250">
+</p>
 
 ## License
 
